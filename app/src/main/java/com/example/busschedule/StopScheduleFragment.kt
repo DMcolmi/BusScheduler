@@ -20,11 +20,20 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.coroutineScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.busschedule.database.BusScheduleApplication
 import com.example.busschedule.databinding.StopScheduleFragmentBinding
+import com.example.busschedule.viewmodels.BusScheduleViewModel
+import com.example.busschedule.viewmodels.BusScheduleViewModelFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
-class StopScheduleFragment: Fragment() {
+class StopScheduleFragment : Fragment() {
 
     companion object {
         var STOP_NAME = "stopName"
@@ -37,6 +46,12 @@ class StopScheduleFragment: Fragment() {
     private lateinit var recyclerView: RecyclerView
 
     private lateinit var stopName: String
+
+    private val viewModel: BusScheduleViewModel by activityViewModels {
+        BusScheduleViewModelFactory(
+            (activity?.application as BusScheduleApplication).database.scheduleDao()
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +68,16 @@ class StopScheduleFragment: Fragment() {
     ): View? {
         _binding = StopScheduleFragmentBinding.inflate(inflater, container, false)
         val view = binding.root
+        val busStopAdapter = BusStopAdapter({})
+        recyclerView = binding.recyclerView
+        recyclerView.adapter = busStopAdapter
+
+        lifecycle.coroutineScope.launch {
+            viewModel.scheduleForStopName(stopName).collect {
+                busStopAdapter.submitList(it)
+            }
+        }
+
         return view
     }
 
